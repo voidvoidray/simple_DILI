@@ -87,7 +87,6 @@ module top_simple_HWDILI #(
     wire resetn = pushbutton;
     wire reset = !resetn;
 
-
     // USB CLK Heartbeat
     reg [24:0] usb_timer_heartbeat;
     always @(posedge usb_clk_buf) usb_timer_heartbeat <= usb_timer_heartbeat +  25'd1;
@@ -98,6 +97,12 @@ module top_simple_HWDILI #(
     always @(posedge crypt_clk) crypt_clk_heartbeat <= crypt_clk_heartbeat +  23'd1;
     assign led2 = crypt_clk_heartbeat[22];
 
+
+
+    wire VALID_TO_DUT;
+    wire READY_FROM_DUT;
+    wire VALID_FROM_DUT;               
+    wire READY_TO_DUT;
 
     cw305_usb_reg_fe #(
        .pBYTECNT_SIZE           (pBYTECNT_SIZE),
@@ -160,11 +165,16 @@ module top_simple_HWDILI #(
        .O_textin                (crypt_textout),
        .O_cipherin              (),                     // unused
        .O_start                 (crypt_start),
+
        .oRESET                  (dut_RESET       ),
        .o_sec_lvl               ( w_sec_lvl      ),
        .o_encode_modei          ( w_encode_modei ),
        .o_di                    ( w_di           ),        
-       .i_samples               ( w_samples      )
+       .i_samples               ( w_samples      ),
+       .VALID_TO_DUT            ( VALID_TO_DUT   ),
+       .READY_FROM_DUT          ( READY_FROM_DUT ),
+       .VALID_FROM_DUT          ( VALID_FROM_DUT ),
+       .READY_TO_DUT            ( READY_TO_DUT   )
     );
 
     assign usb_data = isout? usb_dout : 8'bZ;
@@ -206,22 +216,23 @@ module top_simple_HWDILI #(
   // requires an external USB-JTAG adapter (such as Xilinx Platform
   // Cable USB).
 
-decoder uDECODER #(
+decoder #(
     .OUTPUT_W (  4 ),
     .COEFF_W  ( 23 ),
     .W        ( 64 )
-) (
+) uDUT (
     .rst            ( dut_RESET      ),
     .clk            ( crypt_clk      ),
     .sec_lvl        ( w_sec_lvl      ), // [2:0]
     .encode_modei   ( w_encode_modei ), // [2:0]
-    .valid_i        (       ),
-    .ready_i        (       ),
-    .di             ( w_di  ), // [W-1:0]
-    .samples        ( w_samples  ), // [OUTPUT_W*COEFF_W-1:0]
-    .valid_o        (       ),
-    .ready_o        (       ) 
+    .valid_i        ( VALID_TO_DUT   ),
+    .ready_i        ( READY_FROM_DUT ),
+    .di             ( w_di           ), // [W-1:0]
+    .samples        ( w_samples      ), // [OUTPUT_W*COEFF_W-1:0]
+    .valid_o        ( VALID_FROM_DUT ),
+    .ready_o        ( READY_TO_DUT   ) 
 );
+
 
 endmodule
 
