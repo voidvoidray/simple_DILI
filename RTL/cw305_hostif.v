@@ -238,7 +238,7 @@ always @(posedge usb_clk) begin
     end
 end
 
-always @(posedge usb_clk) begin
+always @(posedge crypto_clk) begin
     if (reset_i) begin
         dut_reset  <= 1'h0;
     end
@@ -256,7 +256,7 @@ always @(posedge usb_clk) begin
     end
 end
 
-always @(posedge usb_clk) begin
+always @(posedge crypto_clk) begin
     if (reset_i) begin
         o_sec_lvl  <= 3'h0;
     end
@@ -269,7 +269,7 @@ always @(posedge usb_clk) begin
     end
 end
 
-always @(posedge usb_clk) begin
+always @(posedge crypto_clk) begin
     if (reset_i) begin
         o_encode_modei  <= 3'h0;
     end
@@ -282,7 +282,7 @@ always @(posedge usb_clk) begin
     end
 end
 
-always @(posedge usb_clk) begin
+always @(posedge crypto_clk) begin
     if (reset_i) begin
         start  <= 1'h0;
     end
@@ -300,7 +300,7 @@ always @(posedge usb_clk) begin
     end
 end
 
-always @(posedge usb_clk) begin
+always @(posedge crypto_clk) begin
     if (reset_i) begin
         o_di  <= 'h0;
     end
@@ -314,37 +314,52 @@ always @(posedge usb_clk) begin
 end
 
 reg datvalid;
-always @(posedge usb_clk) begin
+reg datvalid_d;
+always @(posedge crypto_clk) begin
     if (reset_i) begin
         datvalid <= 1'b0;
     end
-//    else if (READY_FROM_DUT == 1'b1) begin
-//        datvalid <= 1'b0;
-//    end
     else if (start == 1'b1) begin
         datvalid <= 1'b1;
+    end
+    else if (READY_FROM_DUT == 1'b1) begin
+        datvalid <= 1'b0;
+    end
+//    else if (datvalid == 1'b1) begin
+//        datvalid <= 1'b0;
+//    end
+end
+always @(posedge crypto_clk) begin
+    if (reset_i) begin
+        datvalid_d <= 1'b0;
+    end
+    else if (datvalid == 1'b1) begin
+        datvalid_d <= datvalid;
+    end
+    else if (READY_FROM_DUT == 1'b1) begin
+        datvalid_d <= 1'b0;
     end
 //    else if (datvalid == 1'b1) begin
 //        datvalid <= 1'b0;
 //    end
 end
 
-assign  VALID_TO_DUT    = datvalid;
+assign  VALID_TO_DUT    = datvalid | datvalid_d;
 
 assign  READY_TO_DUT    = 1'b1;
 
 reg  [pOUTPUT_W*pCOEFF_W-1:0]        samples;
-always @(posedge usb_clk) begin
+always @(posedge crypto_clk) begin
     if (reset_i) begin
         samples <= 'h0;
     end
-    else if (VALID_FROM_DUT == 1'b1) begin
-        samples <= 1'b0;
+    else if (READY_FROM_DUT == 1'b1) begin
+        samples <= i_samples;
     end
 end
 
 reg dat_recv_ack;
-always @(posedge usb_clk) begin
+always @(posedge crypto_clk) begin
     if (reset_i) begin
         dat_recv_ack <= 1'b0;
     end

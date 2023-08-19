@@ -58,18 +58,21 @@ module clocks (
                              0; //Default off
 
 `ifdef __ICARUS__
-    assign O_cryptoclk = cclk_src_is_ext? I_cw_clkin : I_pll_clk1;
-    assign O_cw_clkout = cclk_output_ext? O_cryptoclk : 1'b0;
+    assign O_cryptoclk = cclk_src_is_ext ? I_cw_clkin : I_pll_clk1;
+    assign O_cw_clkout = cclk_output_ext ? O_cryptoclk : 1'b0;
     assign usb_clk_bufg = usb_clk;
     assign usb_clk_buf = usb_clk_bufg;
 
 `else
-    BUFGMUX_CTRL CCLK_MUX (
-       .O(O_cryptoclk),    // 1-bit output: Clock output
-       .I0(I_pll_clk1),    // 1-bit input: Primary clock
-       .I1(I_cw_clkin),    // 1-bit input: Secondary clock
-       .S(cclk_src_is_ext) // 1-bit input: Clock select for I1
-    );    
+//    BUFGMUX_CTRL CCLK_MUX (
+//       .O(O_cryptoclk),    // 1-bit output: Clock output
+//       .I0(I_pll_clk1),    // 1-bit input: Primary clock
+//       .I1(I_cw_clkin),    // 1-bit input: Secondary clock
+//       .S(cclk_src_is_ext) // 1-bit input: Clock select for I1
+//    );    
+
+    // dslee    01:23:31 2023-08-19 - I don't have unisim env.
+    assign O_cryptoclk = ( cclk_src_is_ext == 1'b0 ) ? I_pll_clk1 : I_cw_clkin ;
 
     ODDR CWOUT_ODDR (
        .Q(O_cw_clkout),   // 1-bit DDR output

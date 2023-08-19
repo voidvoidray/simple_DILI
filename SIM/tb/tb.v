@@ -169,6 +169,13 @@ initial begin
     usb_trigger     = 'h0;
 end
 
+initial begin
+    j16_sel = 1'b0;
+    k16_sel = 1'b0;
+    k15_sel = 1'b0;
+    l14_sel = 1'b0;
+end
+
 // Vectors
 initial begin
     //`include "../vec/test_basic.v"
