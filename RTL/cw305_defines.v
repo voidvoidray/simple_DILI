@@ -50,5 +50,12 @@ either expressed or implied, of NewAE Technology Inc.
 `define REG_CONTROL2                    'h0D
 `define REG_CONTROL3                    'h0E
 `define REG_DATAIN                      'h0F
+`define REG_SAMPLES0                    'h10
+`define REG_SAMPLES1                    'h11
+`define REG_SAMPLES2                    'h12
+`define REG_SAMPLES3                    'h13
+`define REG_SAMPLES4                    'h14
+`define REG_SAMPLES5                    'h15
+
 
 

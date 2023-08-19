@@ -88,6 +88,19 @@ module cw305_hostif #(
    (* ASYNC_REG = "TRUE" *) reg  [pCT_WIDTH-1:0] reg_crypt_cipherout_usb;
    (* ASYNC_REG = "TRUE" *) reg  [1:0] go_pipe;
    (* ASYNC_REG = "TRUE" *) reg  [1:0] busy_pipe;
+   
+   
+   wire busy;
+reg datvalid;
+reg datvalid_d;
+reg  [pOUTPUT_W*pCOEFF_W-1:0]        samples0;
+reg  [pOUTPUT_W*pCOEFF_W-1:0]        samples1;
+reg  [pOUTPUT_W*pCOEFF_W-1:0]        samples2;
+reg  [pOUTPUT_W*pCOEFF_W-1:0]        samples3;
+reg  [pOUTPUT_W*pCOEFF_W-1:0]        samples4;
+reg  [pOUTPUT_W*pCOEFF_W-1:0]        samples5;
+reg [1:0] r_dat_recv_ack;
+wire      dat_recv_ack;
 
 
    always @(posedge crypto_clk) begin
@@ -124,10 +137,11 @@ module cw305_hostif #(
 //------------------------------------------------------------------------------
 
 always @(*) begin
+    reg_read_data = 8'h0;
     if (reg_addrvalid && reg_read) begin
         case (reg_address)
-            `REG_CLKSETTINGS:           reg_read_data = O_clksettings;
-            `REG_USER_LED:              reg_read_data = O_user_led;
+            `REG_CLKSETTINGS:           reg_read_data = {3'b0, O_clksettings};
+            `REG_USER_LED:              reg_read_data = {7'b0, O_user_led};
             `REG_CRYPT_TYPE:            reg_read_data = pCRYPT_TYPE;
             `REG_CRYPT_REV:             reg_read_data = pCRYPT_REV;
             `REG_IDENTIFY:              reg_read_data = pIDENTIFY;
@@ -138,7 +152,17 @@ always @(*) begin
             `REG_CRYPT_TEXTOUT:         reg_read_data = reg_crypt_textout_usb[reg_bytecnt*8 +: 8];
             `REG_CRYPT_CIPHEROUT:       reg_read_data = reg_crypt_cipherout_usb[reg_bytecnt*8 +: 8];
             `REG_BUILDTIME:             reg_read_data = buildtime[reg_bytecnt*8 +: 8];
-            default:                    reg_read_data = 0;
+            `REG_CONTROL  :             reg_read_data = {7'b0, dut_reset};
+            `REG_CONTROL2 :             reg_read_data = {1'b0, o_encode_modei, 1'b0, o_sec_lvl};
+            `REG_CONTROL3 :             reg_read_data = {3'b0, busy, 3'b0,start};
+            `REG_DATAIN   :             reg_read_data = o_di[reg_bytecnt*8 +: 8];
+            `REG_SAMPLES0 :             reg_read_data = samples0[reg_bytecnt*8 +: 8];
+            `REG_SAMPLES1 :             reg_read_data = samples1[reg_bytecnt*8 +: 8];
+            `REG_SAMPLES2 :             reg_read_data = samples2[reg_bytecnt*8 +: 8];
+            `REG_SAMPLES3 :             reg_read_data = samples3[reg_bytecnt*8 +: 8];
+            `REG_SAMPLES4 :             reg_read_data = samples4[reg_bytecnt*8 +: 8];
+            `REG_SAMPLES5 :             reg_read_data = samples5[reg_bytecnt*8 +: 8];
+            default       :             reg_read_data = 0;
         endcase
     end
     else begin
@@ -282,6 +306,12 @@ always @(posedge crypto_clk) begin
     end
 end
 
+
+
+
+assign busy = start | datvalid | datvalid_d;
+
+
 always @(posedge crypto_clk) begin
     if (reset_i) begin
         start  <= 1'h0;
@@ -313,8 +343,7 @@ always @(posedge crypto_clk) begin
     end
 end
 
-reg datvalid;
-reg datvalid_d;
+
 always @(posedge crypto_clk) begin
     if (reset_i) begin
         datvalid <= 1'b0;
@@ -325,9 +354,6 @@ always @(posedge crypto_clk) begin
     else if (READY_FROM_DUT == 1'b1) begin
         datvalid <= 1'b0;
     end
-//    else if (datvalid == 1'b1) begin
-//        datvalid <= 1'b0;
-//    end
 end
 always @(posedge crypto_clk) begin
     if (reset_i) begin
@@ -339,35 +365,42 @@ always @(posedge crypto_clk) begin
     else if (READY_FROM_DUT == 1'b1) begin
         datvalid_d <= 1'b0;
     end
-//    else if (datvalid == 1'b1) begin
-//        datvalid <= 1'b0;
-//    end
 end
 
-assign  VALID_TO_DUT    = datvalid | datvalid_d;
+//assign  VALID_TO_DUT    = datvalid | datvalid_d;
+assign  VALID_TO_DUT    = datvalid;
 
-assign  READY_TO_DUT    = 1'b1;
+assign  READY_TO_DUT    = datvalid | datvalid_d | VALID_FROM_DUT;
 
-reg  [pOUTPUT_W*pCOEFF_W-1:0]        samples;
 always @(posedge crypto_clk) begin
     if (reset_i) begin
-        samples <= 'h0;
+        samples0 <= 'h0;
+        samples1 <= 'h0;
+        samples2 <= 'h0;
+        samples3 <= 'h0;
+        samples4 <= 'h0;
+        samples5 <= 'h0;
     end
-    else if (READY_FROM_DUT == 1'b1) begin
-        samples <= i_samples;
+    else if (VALID_FROM_DUT == 1'b1) begin
+        samples0 <= i_samples;
+        samples1 <= samples0;
+        samples2 <= samples1;
+        samples3 <= samples2;
+        samples4 <= samples3;
+        samples5 <= samples4;
     end
 end
 
-reg dat_recv_ack;
+
 always @(posedge crypto_clk) begin
     if (reset_i) begin
-        dat_recv_ack <= 1'b0;
+        r_dat_recv_ack <= 2'b0;
     end
-    else if (READY_FROM_DUT == 1'b1) begin
-        dat_recv_ack <= 1'b0;
+    else begin
+        r_dat_recv_ack <= {r_dat_recv_ack[0], READY_FROM_DUT};
     end
 end
-
+assign dat_recv_ack = r_dat_recv_ack[0] & ~r_dat_recv_ack[1];
 
 
 always @(posedge crypto_clk) begin
